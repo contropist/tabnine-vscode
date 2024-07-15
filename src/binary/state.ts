@@ -81,4 +81,6 @@ export type State = {
   enabled_features?: string[];
   installation_time?: string;
   access_token?: string;
+  cloud_connection_health_status?: string;
+  user_avatar_url?: string;
 };

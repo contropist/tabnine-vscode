@@ -8,6 +8,8 @@ import {
 } from "./lookAheadSuggestion";
 import debounceCompletions from "./debounceCompletions";
 import reportSuggestionShown from "./reportSuggestionShown";
+import { Logger } from "./utils/logger";
+import { completionsState } from "./state/completionsState";
 
 const END_OF_LINE_VALID_REGEX = new RegExp("^\\s*[)}\\]\"'`]*\\s*[:{;,]?\\s*$");
 
@@ -22,9 +24,10 @@ export default async function provideInlineCompletionItems(
   try {
     clearCurrentLookAheadSuggestion();
     if (
+      !completionsState.value ||
+      !getShouldComplete() ||
       !completionIsAllowed(document, position) ||
-      !isValidMidlinePosition(document, position) ||
-      !getShouldComplete()
+      !isValidMidlinePosition(document, position)
     ) {
       return undefined;
     }
@@ -45,7 +48,7 @@ export default async function provideInlineCompletionItems(
     reportSuggestionShown(document, completions);
     return completions;
   } catch (e) {
-    console.error(`Error setting up request: ${e}`);
+    Logger.error(`Error setting up request: ${e}`);
 
     return undefined;
   }

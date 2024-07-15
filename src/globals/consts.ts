@@ -2,11 +2,11 @@ import isCloudEnv from "../cloudEnvs/isCloudEnv";
 
 export const OPEN_SETTINGS_COMMAND = "workbench.action.openSettings";
 export const TABNINE_URL_QUERY_PARAM = "tabnineUrl";
+export const TABNINE_RETURN_URL_QUERY_PARAM = "returnUrl";
 export const API_VERSION = "4.4.223";
-export const BINARY_UPDATE_URL = "https://update.tabnine.com/bundles";
-export const BINARY_UPDATE_VERSION_FILE_URL = `${BINARY_UPDATE_URL}/version`;
 export const ATTRIBUTION_BRAND = "⌬ ";
 export const BRAND_NAME = "tabnine";
+export const ENTERPRISE_BRAND_NAME = "Tabnine Enterprise";
 export const LIMITATION_SYMBOL = "🔒";
 export const FULL_BRAND_REPRESENTATION = ATTRIBUTION_BRAND + BRAND_NAME;
 export const BUNDLE_DOWNLOAD_FAILURE_MESSAGE =
@@ -40,9 +40,15 @@ export const BINARY_STATUS_BAR_FIRST_MESSAGE_POLLING_INTERVAL = +(
   process.env.BINARY_NOTIFICATION_POLLING_INTERVAL || 10_000
 ); // 10 seconds
 
+export const BINARY_STATE_POLLING_INTERVAL_MILLISECONDS = 2_000;
+
 export const STATUS_BAR_NOTIFICATION_PERIOD = +(
   process.env.STATUS_BAR_NOTIFICATION_PERIOD || 2 * 60 * 1_000
 ); // 2 minutes
+
+export const BINARY_UPDATE_WORKSPACE_INTERVAL = +(
+  process.env.BINARY_UPDATE_WORKSPACE_INTERVAL || 30_000
+); // 30 seconds
 
 export const STATUS_BAR_FIRST_TIME_CLICKED = "status-bar-first-time-clicked";
 
@@ -54,6 +60,8 @@ export const MINIMAL_SUPPORTED_VSCODE_API = "1.35.0";
 export const ALPHA_VERSION_KEY = "tabnine.alpha.version";
 export const BETA_CHANNEL_MESSAGE_SHOWN_KEY =
   "tabnine.joinBetaChannelMessageShown";
+export const CONGRATS_MESSAGE_SHOWN_KEY =
+  "tabnine.CongratulationsTabnineIsUpMessageShown";
 
 export const DEFAULT_DETAIL = BRAND_NAME;
 
@@ -146,6 +154,8 @@ export const IS_OSX = process.platform === "darwin";
 
 export const SLEEP_TIME_BEFORE_OPEN_HUB = isCloudEnv ? 1000 * 10 : 0;
 
+export const INLINE_REQUEST_TIMEOUT = 3000;
+
 export const TAB_OVERRIDE_COMMAND = "tabnine.tab-override";
 export const TABNINE_TREE_NAVIGATION_COMMAND = "tabnine:navigation";
 export const TABNINE_OPEN_APP_COMMAND = "tabnine:open-app";
@@ -153,6 +163,7 @@ export const TABNINE_OPEN_GETTING_STARTED_COMMAND =
   "tabnine:open-getting-started";
 export const TABNINE_NOTIFICATIONS_FOCUS_COMMAND =
   "tabnine-notifications.focus";
+export const GET_CHAT_STATE_COMMAND = "tabnine.chat.state";
 
 export const TABNINE_APP_URL = "https://app.tabnine.com";
 const TABNINE_SITE_URL = "https://tabnine.com";
@@ -165,3 +176,11 @@ export enum SuggestionTrigger {
   DocumentChanged = "DocumentChanged",
   LookAhead = "LookAhead",
 }
+
+export const TLS_CONFIG_MIN_SUPPORTED_VERSION = "4.22.0";
+export const CONFIG_COMMAND = "TabNine::config";
+export const EXTENSION_ID = "TabNine.tabnine-vscode";
+export const USE_PROXY_CONFIGURATION = "tabnine.useProxySupport";
+export const IGNORE_CERTIFICATE_ERRORS_CONFIGURATION =
+  "tabnine.ignoreCertificateErrors";
+export const CA_CERTS_CONFIGURATION = "tabnine.caCerts";

@@ -1,59 +1,57 @@
-import { ExtensionContext, StatusBarAlignment, window } from "vscode";
+import {
+  Disposable,
+  ExtensionContext,
+  StatusBarAlignment,
+  window,
+} from "vscode";
 import { getState } from "../binary/requests/requests";
 import { STATUS_BAR_COMMAND } from "../commandsHandler";
 import { FULL_BRAND_REPRESENTATION, STATUS_NAME } from "../globals/consts";
 import StatusBarData from "./StatusBarData";
 import StatusBarPromotionItem from "./StatusBarPromotionItem";
-import { ONPREM } from "../onPrem";
+import { ServiceLevel } from "../binary/state";
+import { Logger } from "../utils/logger";
+import { completionsState } from "../state/completionsState";
 
 const SPINNER = "$(sync~spin)";
 
 let statusBarData: StatusBarData | undefined;
 let promotion: StatusBarPromotionItem | undefined;
 
-export function registerStatusBar(context: ExtensionContext): void {
+export function registerStatusBar(context: ExtensionContext): Disposable {
   if (statusBarData) {
-    return;
+    return statusBarData;
   }
 
-  const statusBar = window.createStatusBarItem(StatusBarAlignment.Left, -1);
+  const statusBar = window.createStatusBarItem(StatusBarAlignment.Right, -1);
   promotion = new StatusBarPromotionItem(
-    window.createStatusBarItem(StatusBarAlignment.Left, -1)
+    window.createStatusBarItem(StatusBarAlignment.Right, -1)
   );
   statusBarData = new StatusBarData(statusBar, context);
-  if (!ONPREM) {
-    statusBar.command = STATUS_BAR_COMMAND;
-  }
+  statusBar.command = STATUS_BAR_COMMAND;
 
   statusBar.show();
   try {
     (statusBar as { name?: string }).name = STATUS_NAME;
     (promotion.item as { name?: string }).name = STATUS_NAME;
   } catch (err) {
-    console.error("failed to rename status bar");
+    Logger.error("failed to rename status bar");
   }
+
+  completionsState.on("changed", () => statusBarData?.updateStatusBar());
 
   setLoadingStatus("Starting...");
-  context.subscriptions.push(statusBar);
-  if (!ONPREM) {
-    context.subscriptions.push(promotion.item);
-  }
-}
-
-export async function pollServiceLevel(): Promise<void> {
-  if (!statusBarData) {
-    return;
-  }
-  if (ONPREM) {
-    return;
-  }
-
-  const state = await getState();
-  statusBarData.serviceLevel = state?.service_level;
+  return Disposable.from(statusBarData, promotion);
 }
 
 export function promotionTextIs(text: string): boolean {
   return promotion?.item?.text === text;
+}
+
+export function setServiceLevel(level: ServiceLevel | undefined): void {
+  if (statusBarData) {
+    statusBarData.serviceLevel = level;
+  }
 }
 
 export async function onStartServiceLevel(): Promise<void> {
@@ -63,6 +61,7 @@ export async function onStartServiceLevel(): Promise<void> {
 
   const state = await getState();
   statusBarData.serviceLevel = state?.service_level;
+  statusBarData.isLoggedIn = state?.is_logged_in;
 }
 
 export function setDefaultStatus(): void {

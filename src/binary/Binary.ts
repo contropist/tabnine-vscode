@@ -1,6 +1,7 @@
 import * as child_process from "child_process";
-import { Disposable, EventEmitter } from "vscode";
+import { Disposable, EventEmitter, commands } from "vscode";
 import { Mutex } from "await-semaphore";
+import { once } from "events";
 import BinaryRequester from "./InnerBinary";
 import runBinary from "./runBinary";
 import {
@@ -9,7 +10,8 @@ import {
   restartBackoff,
   BINARY_RESTART_EVENT,
 } from "../globals/consts";
-import { sleep } from "../utils/utils";
+import { sleep, waitForRejection } from "../utils/utils";
+import { Logger } from "../utils/logger";
 
 type RestartCallback = () => void;
 
@@ -28,11 +30,20 @@ export default class Binary {
 
   private onRestartEventEmitter: EventEmitter<string> = new EventEmitter();
 
+  private processRunArgs: string[] = [];
+
+  private ready = new EventEmitter<void>();
+
+  public onReady = new Promise((resolve) => {
+    this.ready.event(resolve);
+  });
+
   public onRestart(callback: RestartCallback): Disposable {
     return this.onRestartEventEmitter.event(callback);
   }
 
-  public async init(): Promise<void> {
+  public async init(processRunArgs: string[]): Promise<void> {
+    this.processRunArgs = processRunArgs;
     return this.startChild();
   }
 
@@ -52,7 +63,7 @@ export default class Binary {
       }
 
       if (this.isBinaryDead()) {
-        console.warn("Binary died. It is being restarted.");
+        Logger.info("Binary died. It is being restarted.");
         await this.restartChild();
 
         return null;
@@ -68,10 +79,10 @@ export default class Binary {
 
       return result;
     } catch (err) {
-      console.error(err);
+      Logger.error(err);
       this.requestFailures += 1;
       if (this.requestFailures > REQUEST_FAILURES_THRESHOLD) {
-        console.warn("Binary not returning results, it is being restarted.");
+        Logger.warn("Binary not returning results, it is being restarted.");
         await this.restartChild();
       }
     } finally {
@@ -110,13 +121,14 @@ export default class Binary {
 
   private async startChild() {
     const { proc, readLine } = await runBinary([
+      ...this.processRunArgs,
       `ide-restart-counter=${this.consecutiveRestarts}`,
     ]);
 
     this.proc = proc;
     this.proc.unref(); // AIUI, this lets Node exit without waiting for the child
     this.proc.on("exit", (code, signal) => {
-      console.warn(
+      Logger.warn(
         `Binary child process exited with code ${code ?? "unknown"} signal ${
           signal ?? "unknown"
         }`
@@ -124,16 +136,21 @@ export default class Binary {
       void this.restartChild();
     });
     this.proc.on("error", (error) => {
-      console.warn(`Binary child process error: ${error.message}`);
+      Logger.warn(`Binary child process error: ${error.message}`);
       void this.restartChild();
     });
     this.proc.stdin?.on("error", (error) => {
-      console.warn(`Binary child process stdin error: ${error.message}`);
+      Logger.warn(`Binary child process stdin error: ${error.message}`);
       void this.restartChild();
     });
     this.proc.stdout?.on("error", (error) => {
-      console.warn(`Binary child process stdout error: ${error.message}`);
+      Logger.warn(`Binary child process stdout error: ${error.message}`);
       void this.restartChild();
+    });
+
+    void waitForRejection(once(this.proc, "exit"), 200).then(() => {
+      void commands.executeCommand("setContext", "tabnine.process.ready", true);
+      this.ready.fire();
     });
 
     this.innerBinary.init(proc, readLine);

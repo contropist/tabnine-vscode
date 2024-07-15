@@ -10,14 +10,13 @@ import {
 
 import provideCompletionItems from "./provideCompletionItems";
 import { COMPLETION_TRIGGERS } from "./globals/consts";
-import { ONPREM } from "./onPrem";
 import {
   isInlineSuggestionProposedApiSupported,
   isInlineSuggestionReleasedApiSupported,
 } from "./globals/versions";
-import { initTracker } from "./inlineSuggestions/documentChangesTracker";
-import { initTabOverride } from "./lookAheadSuggestion";
 import enableProposed from "./globals/proposedAPI";
+import { registerInlineProvider } from "./inlineSuggestions/registerInlineProvider";
+import { completionsState } from "./state/completionsState";
 
 let subscriptions: Disposable[] = [];
 
@@ -42,6 +41,14 @@ export default async function installAutocomplete(
       }
     })
   );
+
+  completionsState.on("changed", (enabled) => {
+    if (enabled) {
+      void reinstallAutocomplete(InstallOptions.get());
+    } else {
+      uninstallAutocomplete();
+    }
+  });
 }
 
 async function reinstallAutocomplete({
@@ -51,24 +58,15 @@ async function reinstallAutocomplete({
 }: InstallOptions) {
   uninstallAutocomplete();
 
+  if (!completionsState.value) {
+    return;
+  }
+
   if (
     (inlineEnabled || snippetsEnabled) &&
     (isInlineSuggestionReleasedApiSupported() || (await isDefaultAPIEnabled()))
   ) {
-    const provideInlineCompletionItems = (
-      await import("./provideInlineCompletionItems")
-    ).default;
-    const inlineCompletionsProvider = {
-      provideInlineCompletionItems,
-    };
-    subscriptions.push(
-      languages.registerInlineCompletionItemProvider(
-        { pattern: "**" },
-        inlineCompletionsProvider
-      ),
-      ...initTracker()
-    );
-    await initTabOverride(subscriptions);
+    subscriptions.push(await registerInlineProvider());
   }
 
   if (autocompleteEnabled) {
@@ -110,9 +108,6 @@ class InstallOptions {
   }
 
   public static get() {
-    if (ONPREM) {
-      return new InstallOptions(true, true, false);
-    }
     return new InstallOptions(
       isInlineEnabled(),
       isSnippetSuggestionsEnabled(),

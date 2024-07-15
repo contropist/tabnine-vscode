@@ -13,8 +13,9 @@ import {
   getUpdateVersionFileUrl,
   versionPath,
 } from "../paths";
-import { EventName, report } from "../../reports/reporter";
+import { report } from "../../reports/reporter";
 import { setDirectoryFilesAsExecutable } from "../utils";
+import EventName from "../../reports/EventName";
 
 type BundlePaths = {
   bundlePath: string;
@@ -64,8 +65,7 @@ function createBundleDirectory(bundleDirectory: string): Promise<void> {
 }
 
 async function getCurrentVersion(): Promise<string> {
-  const versionUrl = getUpdateVersionFileUrl();
-  const version = await downloadFileToStr(versionUrl);
+  const version = await downloadFileToStr(getUpdateVersionFileUrl());
   assertValidVersion(version);
   return version;
 }

@@ -1,13 +1,14 @@
 import * as fs from "fs";
 import { getActivePath, versionPath } from "../paths";
-import { BAD_VERSION } from "./binaryValidator";
+import { isBadVersion } from "./binaryValidator";
+import { Logger } from "../../utils/logger";
 
 export default function handleActiveFile(): string | null {
   try {
     const activePath = getActivePath();
     if (fs.existsSync(activePath)) {
       const activeVersion = fs.readFileSync(activePath, "utf-8").trim();
-      if (activeVersion === BAD_VERSION) {
+      if (isBadVersion(activeVersion)) {
         return null;
       }
 
@@ -17,7 +18,7 @@ export default function handleActiveFile(): string | null {
       }
     }
   } catch (e) {
-    console.error(
+    Logger.error(
       "Error handling .active file. Falling back to semver sorting",
       e
     );
