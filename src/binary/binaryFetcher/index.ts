@@ -4,34 +4,33 @@ import {
   OPEN_NETWORK_SETUP_HELP,
   RELOAD_BUTTON,
 } from "../../globals/consts";
-import {
-  EventName,
-  reportErrorEvent,
-  reportException,
-} from "../../reports/reporter";
+import { reportErrorEvent, reportException } from "../../reports/reporter";
 import handleActiveFile from "./activeFileHandler";
 import downloadAndExtractBundle from "./bundleDownloader";
 import handleExistingVersion from "./existingVersionHandler";
-import { onPluginInstalledEmitter } from "../../events/onPluginInstalledEmitter";
-import { ONPREM } from "../../onPrem";
+import {
+  installationState,
+  InstallationState,
+} from "../../events/installationStateChangedEmitter";
+import EventName from "../../reports/EventName";
+import { Logger } from "../../utils/logger";
 
 export default async function fetchBinaryPath(): Promise<string> {
-  if (!ONPREM) {
-    const activeVersionPath = handleActiveFile();
-    if (activeVersionPath) {
-      return activeVersionPath;
-    }
+  if (process.env.BINARY_LOCATION) {
+    return process.env.BINARY_LOCATION;
+  }
+  const activeVersionPath = handleActiveFile();
+  if (activeVersionPath) {
+    installationState.fire(InstallationState.ExistingInstallation);
+    return activeVersionPath;
   }
 
   const existingVersion = await handleExistingVersion();
-  if (ONPREM) {
-    // force cast when on prem in any case because the binary is bundled
-    return existingVersion as string;
-  }
   if (existingVersion) {
+    installationState.fire(InstallationState.ExistingInstallation);
     return existingVersion;
   }
-  onPluginInstalledEmitter.fire();
+  installationState.fire(InstallationState.NewInstallation);
   return tryDownloadVersion();
 }
 
@@ -58,7 +57,8 @@ async function downloadVersion(): Promise<string> {
 async function handleErrorMessage(error: Error): Promise<string> {
   reportErrorEvent(EventName.BUNDLE_DOWNLOAD_FAILURE, error);
   reportException(error);
-  return new Promise((resolve, reject) => {
+  Logger.error(BUNDLE_DOWNLOAD_FAILURE_MESSAGE, error);
+  return new Promise((_resolve, reject) => {
     void window
       .showErrorMessage(
         BUNDLE_DOWNLOAD_FAILURE_MESSAGE,

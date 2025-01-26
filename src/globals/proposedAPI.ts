@@ -3,8 +3,9 @@ import * as vscode from "vscode";
 import * as path from "path";
 import * as os from "os";
 import showMessage from "../preRelease/messages";
+import { Logger } from "../utils/logger";
+import { EXTENSION_ID } from "./consts";
 
-const EXTENSION_ID = "TabNine.tabnine-vscode";
 const ARGV_FILE_NAME = "argv.json";
 const PRODUCT_FILE_NAME = "product.json";
 const PRODUCT_FILE_PATH = path.join(vscode.env.appRoot, PRODUCT_FILE_NAME);
@@ -16,7 +17,7 @@ const ENABLE_PROPOSED_API = [
 
 export default async function enableProposed(): Promise<boolean> {
   return handleProposed().catch((error) => {
-    console.error("failed to enable proposedAPI", error);
+    Logger.error(`failed to enable proposedAPI ${error}`);
     return false;
   });
 }
